@@ -1360,7 +1360,9 @@ $("#agebar").classList.toggle("hide", U.filter !== "old");
 "use strict";
 const SUPABASE_URL = "https://jpgzqcfbhkttwvembfjo.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwZ3pxY2ZiaGt0dHd2ZW1iZmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NTg5NjUsImV4cCI6MjEwNjMzNDk2NX0.OsmZzPlJWNppbPmXdTUaoSz2fdVk-boEfTVrl-2Xrnw";
-if(!window.supabase || SUPABASE_URL.indexOf("http") !== 0) return; /* 未設定なら今まで通りローカルのみ */
+const _st = document.getElementById("syncState");
+if(SUPABASE_URL.indexOf("http") !== 0) return; /* 未設定なら今まで通りローカルのみ */
+if(!window.supabase){ if(_st) _st.textContent = "⚠ 同期オフ：同期ライブラリを読み込めませんでした"; return; }
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const META_KEY = KEY + "_sync";
@@ -1370,6 +1372,7 @@ try{ meta = Object.assign(meta, JSON.parse(localStorage.getItem(META_KEY) || "{}
 const saveMeta = () => { try{ localStorage.setItem(META_KEY, JSON.stringify(meta)); }catch(e){} };
 const setState = t => { stateEl.textContent = t; };
 const sameTime = (a,b) => !!a && !!b && new Date(a).getTime() === new Date(b).getTime();
+setState("☁ 準備中…");
 
 function adopt(row){
   const o = row.data || {};
@@ -1391,11 +1394,13 @@ async function sync(){
   try{
     const { data: row, error } = await sb.from("app_data").select("data,updated_at").maybeSingle();
     if(error) throw error;
-    if(!row){ await push(); }
+    if(!row){ if(S.items.length || meta.dirty) await push(); }
     else if(sameTime(row.updated_at, meta.remoteAt)){ if(meta.dirty) await push(); }
     else{
       const localHas = S.items.length > 0 && (meta.dirty || !meta.remoteAt);
-      if(!localHas || confirm("クラウドに別の端末のデータがあります。\n\nOK＝クラウドのデータに入れかえる（この端末の未同期分は消えます）\nキャンセル＝この端末のデータでクラウドを上書き")) adopt(row);
+      const remoteEmpty = !(row.data && Array.isArray(row.data.items) && row.data.items.length);
+      if(remoteEmpty && S.items.length){ await push(); }
+      else if(!localHas || confirm("クラウドに別の端末のデータがあります。\n\nOK＝クラウドのデータに入れかえる（この端末の未同期分は消えます）\nキャンセル＝この端末のデータでクラウドを上書き")) adopt(row);
       else await push();
     }
     setState("☁ 同期済み");
