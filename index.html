@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
 <meta charset="utf-8">
@@ -274,7 +273,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.09.30-9 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.01-10 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -1362,8 +1361,17 @@ $("#agebar").classList.toggle("hide", U.filter !== "old");
 const SUPABASE_URL = "https://jpgzqcfbhkttwvembfjo.supabase.co";
 const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpwZ3pxY2ZiaGt0dHd2ZW1iZmpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA3NTg5NjUsImV4cCI6MjEwNjMzNDk2NX0.OsmZzPlJWNppbPmXdTUaoSz2fdVk-boEfTVrl-2Xrnw";
 const _st = document.getElementById("syncState");
-if(SUPABASE_URL.indexOf("http") !== 0) return; /* 未設定なら今まで通りローカルのみ */
-if(!window.supabase){ if(_st) _st.textContent = "⚠ 同期オフ：同期ライブラリを読み込めませんでした"; return; }
+if(SUPABASE_URL.indexOf("http") !== 0){
+  if(_st){ _st.textContent = "同期オフ（未設定）"; }
+  return; /* 未設定なら今まで通りローカルのみ */
+}
+if(!window.supabase){
+  if(_st){
+    _st.textContent = "⚠ 同期オフ：ライブラリ読込失敗（タップで詳細）";
+    _st.onclick = function(){ alert("同期用ライブラリを読み込めませんでした。\n通信状態を確認して、ページを再読み込みしてください。"); };
+  }
+  return;
+}
 
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const META_KEY = KEY + "_sync";
@@ -1374,6 +1382,13 @@ const saveMeta = () => { try{ localStorage.setItem(META_KEY, JSON.stringify(meta
 const setState = t => { stateEl.textContent = t; };
 const sameTime = (a,b) => !!a && !!b && new Date(a).getTime() === new Date(b).getTime();
 setState("☁ 準備中…");
+let settled = false;
+function showLogin(){
+  settled = true;
+  if(session) return;
+  stateEl.textContent = "☁ 未ログイン（タップでログイン）";
+  box.classList.remove("hide");
+}
 
 function adopt(row){
   const o = row.data || {};
@@ -1426,15 +1441,21 @@ async function auth(kind){
 }
 document.getElementById("syncLogin").onclick = () => auth("in");
 document.getElementById("syncSignup").onclick = () => auth("up");
-stateEl.onclick = () => { if(session && confirm("ログアウトしますか？\n（キャンセル＝今すぐ同期）")) sb.auth.signOut(); else sync(); };
-sb.auth.onAuthStateChange((_e, s) => { session = s; if(!s) box.classList.remove("hide"); });
+stateEl.onclick = () => {
+  if(!session){ box.classList.remove("hide"); return; }   /* 未ログイン＝タップでログイン画面を開く */
+  if(confirm("ログアウトしますか？\n（キャンセル＝今すぐ同期）")) sb.auth.signOut(); else sync();
+};
+sb.auth.onAuthStateChange((_e, s) => { session = s; if(s){ box.classList.add("hide"); } else { showLogin(); } });
 document.addEventListener("visibilitychange", () => { if(document.visibilityState === "visible") sync(); });
 window.addEventListener("online", sync);
 
 sb.auth.getSession().then(({ data }) => {
   session = data.session;
-  if(session){ sync(); } else { box.classList.remove("hide"); }
-});
+  if(session){ settled = true; box.classList.add("hide"); sync(); }
+  else { showLogin(); }
+}).catch(() => { showLogin(); });
+/* 同期ライブラリの初期化が固まっても、ログイン画面は必ず出す */
+setTimeout(() => { if(!settled && !session) showLogin(); }, 3000);
 })();
 </script>
 </body>
