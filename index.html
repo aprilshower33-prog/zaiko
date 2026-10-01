@@ -273,7 +273,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.01-10 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.01-12 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -502,6 +502,17 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
   <!-- ================= データ ================= -->
   <section class="panel" id="panel-data">
     <div class="stat" id="dataStat"></div>
+    <div class="dl" id="kakeiBox">
+      <p class="foot" style="margin:0 0 6px"><b>収支アプリ用に書き出す</b>（販売日の月で絞り込み。空欄なら全期間）</p>
+      <input type="month" id="kkMonth" style="width:100%;margin-bottom:8px">
+      <div class="row">
+        <button class="btn" type="button" id="btnKkSales">① 売上CSV</button>
+        <button class="btn" type="button" id="btnKkCost">② 経費CSV</button>
+      </div>
+      <button class="btn ghost" type="button" id="btnKkOff">③ 帳簿外CSV（仕入先＝不用品）</button>
+      <button class="btn ghost" type="button" id="btnKkClean">仕入先の前後の空白を整える</button>
+      <p class="foot" id="kkInfo" style="margin-top:6px"></p>
+    </div>
     <div class="dl">
       <div class="row">
         <button class="btn" type="button" id="btnCsvOut">CSVで書き出す（Excel対応）</button>
@@ -1282,6 +1293,77 @@ $$(".tabbar button").forEach(b=>b.addEventListener("click", ()=>switchTab(b.data
   });
 });
 $("#btnCsvOut").addEventListener("click", exportCSV);
+
+/* ===== 収支アプリ用 書き出し（v2026.10.01-11） =====
+   売れた商品だけが対象。仕入先が「不用品」のものは帳簿外CSVへ、それ以外は売上CSV＋経費CSVへ。 */
+const OFF_SUPPLIER = "不用品";
+/* 前後の空白（半角・全角）と語中の空白を無視し、全角/半角の違いも統一して比較する */
+const kkNorm = v => String(v == null ? "" : v).normalize("NFKC").replace(/[\s\u3000]/g, "");
+const isOffItem = it => kkNorm(it.supplier) === kkNorm(OFF_SUPPLIER);
+function kkMonthVal(){ const el = document.getElementById("kkMonth"); return el ? el.value : ""; }
+function kkSold(){
+  const ym = kkMonthVal();
+  return S.items.filter(it => it.sellDate && numOr(it.soldPrice) > 0 && (!ym || String(it.sellDate).startsWith(ym)))
+    .sort((a,b)=> String(a.sellDate).localeCompare(String(b.sellDate)));
+}
+function kkCode(it){ return it.code || ((it.batch||"") + "-" + (it.no||"")); }
+function kkSuffix(){ return kkMonthVal() || "全期間"; }
+function kkSave(name, head, rows){
+  if(!rows.length){ toast("対象のデータがありません"); return; }
+  const text = [head.join(",")].concat(rows.map(r=>r.map(csvCell).join(","))).join("\r\n");
+  dl(new Blob(["\ufeff"+text], {type:"text/csv;charset=utf-8"}), name);
+  toast(rows.length + "行を書き出しました");
+}
+function kkExportSales(){
+  const rows = kkSold().filter(it=>!isOffItem(it)).map(it=>[
+    it.sellDate, it.channel||"", it.name||"", "仕入販売", it.supplier||"", Math.round(numOr(it.soldPrice)), "在庫:"+kkCode(it)
+  ]);
+  kkSave(`収支用_売上_${kkSuffix()}.csv`, ["日付","取引先","内容","区分","区分詳細","金額","ソース"], rows);
+}
+function kkExportCost(){
+  const rows = [];
+  kkSold().filter(it=>!isOffItem(it)).forEach(it=>{
+    const c = calc(it), label = (it.name||"商品") + "（" + (it.supplier||"仕入販売") + "）", src = "在庫:"+kkCode(it);
+    const push = (k, acc, v) => { v = Math.round(numOr(v)); if(v > 0) rows.push([it.sellDate, k + ": " + label, acc, v, "(在庫連動)", src]); };
+    push("仕入値", "売上原価", it.cost);
+    push("送料", "荷造運賃", it.ship);
+    push("手数料", "支払手数料", c.fee);
+  });
+  kkSave(`収支用_経費_${kkSuffix()}.csv`, ["日付","内容","勘定科目","金額","備考","ソース"], rows);
+}
+function kkExportOff(){
+  const rows = kkSold().filter(isOffItem).map(it=>{
+    const c = calc(it);
+    return [it.sellDate, it.channel||"", it.name||"", Math.round(numOr(it.soldPrice)), Math.round(numOr(it.ship)), Math.round(c.fee), "在庫:"+kkCode(it)];
+  });
+  kkSave(`収支用_帳簿外_${kkSuffix()}.csv`, ["日付","販売先","内容","売上","送料","手数料","備考"], rows);
+}
+function kkInfo(){
+  const el = document.getElementById("kkInfo"); if(!el) return;
+  const list = kkSold(), off = list.filter(isOffItem).length;
+  el.textContent = `対象：売れた商品 ${list.length}件（仕入販売 ${list.length-off}件／不用品 ${off}件）`;
+}
+function kkCleanSuppliers(){
+  let n = 0;
+  S.items.forEach(it=>{
+    if(it.supplier == null) return;
+    const raw = String(it.supplier), fixed = raw.trim();
+    if(fixed !== raw){ it.supplier = fixed; n++; }
+  });
+  if(n){ save(); renderAll(); }
+  toast(n ? ("仕入先の空白を " + n + " 件整えました") : "整える必要はありませんでした");
+}
+(function(){
+  const m = document.getElementById("kkMonth");
+  if(m){ const d = new Date(); m.value = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0"); m.addEventListener("change", kkInfo); }
+  document.getElementById("btnKkSales").addEventListener("click", kkExportSales);
+  document.getElementById("btnKkCost").addEventListener("click", kkExportCost);
+  document.getElementById("btnKkOff").addEventListener("click", kkExportOff);
+  document.getElementById("btnKkClean").addEventListener("click", kkCleanSuppliers);
+  document.querySelectorAll('[data-tab="data"]').forEach(b=>b.addEventListener("click", ()=>setTimeout(kkInfo,0)));
+  kkInfo();
+})();
+
 $("#btnJsonOut").addEventListener("click", exportJSON);
 $("#btnSample").addEventListener("click", insertSample);
 $("#btnClear").addEventListener("click", ()=>{
