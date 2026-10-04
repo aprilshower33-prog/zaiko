@@ -231,6 +231,34 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 .scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
 .pill{display:inline-block;font-size:11px;padding:1px 7px;border-radius:99px;border:1px solid}
 .pill.g{color:var(--gain);border-color:var(--gain)} .pill.l{color:var(--loss);border-color:var(--loss)}
+/* ---------- カレンダー ---------- */
+.calhead{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.calhead b{font-family:var(--f-disp);font-size:16px;font-weight:600}
+.calhead button{border:1px solid var(--line);background:var(--card);border-radius:8px;min-width:40px;min-height:36px;font-size:15px}
+.calhead .today{font-size:12px;min-width:auto;padding:0 10px}
+.calsum{display:flex;gap:14px;font-size:12.5px;color:var(--ink2);margin-bottom:8px;flex-wrap:wrap}
+.calsum i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:0}
+.calsum .l i{background:var(--listed)} .calsum .s i{background:var(--sold)}
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.calgrid .dow{font-size:11px;text-align:center;color:var(--ink3);padding:2px 0}
+.calgrid .dow.sun{color:var(--loss)} .calgrid .dow.sat{color:#3A6EA5}
+.calgrid .d{min-height:60px;border:1px solid var(--line2);border-radius:7px;padding:3px 1px 5px;min-width:0;overflow:hidden;background:rgba(255,255,255,.6);
+  display:flex;flex-direction:column;align-items:center;gap:2px;font-size:11.5px;line-height:1.2;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.calgrid .d.empty{border:0;background:transparent;cursor:default}
+.calgrid .d .n{font-family:var(--f-num);font-size:12px;color:var(--ink2)}
+.calgrid .d.sun .n{color:var(--loss)} .calgrid .d.sat .n{color:#3A6EA5}
+.calgrid .d.is-today{border-color:var(--ink);border-width:1.5px}
+.calgrid .d.sel{background:var(--kraft-solid);border-color:var(--ink2)}
+.calgrid .d .cs{display:flex;flex-wrap:wrap;justify-content:center;gap:2px}
+.calgrid .d .c{font-family:var(--f-num);font-weight:700;font-size:10px;line-height:15px;border-radius:4px;padding:0 2px;min-width:14px;text-align:center;color:#fff}
+.calgrid .d .c.l{background:var(--listed)} .calgrid .d .c.s{background:var(--sold)}
+.caldetail{margin-top:10px;font-size:13px}
+.caldetail h3{font-size:14px;margin:0 0 6px}
+.caldetail ul{list-style:none;margin:0;padding:0}
+.caldetail li{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--line2)}
+.caldetail li span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.caldetail .tag{font-size:11px;font-weight:700;border-radius:5px;padding:0 6px;color:#fff;margin-right:6px}
+.caldetail .tag.l{background:var(--listed)} .caldetail .tag.s{background:var(--sold)}
 .foot{margin:26px 0 6px;font-size:11.5px;color:var(--ink3);text-align:center;line-height:1.8}
 
 /* ---------- data tab ---------- */
@@ -273,7 +301,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.01-12 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.05-13 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -427,6 +455,21 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
         <label>目標 販売数<input type="number" inputmode="decimal" class="num" id="g-sell"></label>
       </div>
       <div id="goalBars"></div>
+    </div>
+
+    <div class="sec"><h2>カレンダー</h2><span class="line"></span><span class="note">出品日・販売日の件数</span></div>
+    <div class="card" id="calCard">
+      <div class="calhead">
+        <button type="button" data-cal="-1" aria-label="前の月">◀</button>
+        <b id="calTitle"></b>
+        <span style="display:flex;gap:6px">
+          <button type="button" class="today" data-cal="0">今月</button>
+          <button type="button" data-cal="1" aria-label="次の月">▶</button>
+        </span>
+      </div>
+      <div class="calsum" id="calSum"></div>
+      <div class="calgrid" id="calGrid"></div>
+      <div class="caldetail" id="calDetail"></div>
     </div>
 
     <div class="sec"><h2>月べつの実績</h2><span class="line"></span><span class="note">販売日・出品日をもとに集計</span></div>
@@ -1003,6 +1046,7 @@ function renderStats(){
     bar("利益", mm.profit, numOr(tg["g-profit"]), true) +
     bar("出品数", mm.list, numOr(tg["g-list"])) +
     bar("販売数", mm.sell, numOr(tg["g-sell"]));
+  if(typeof renderCalendar === "function") renderCalendar();
 
   // 月べつ
   const bm = byMonth(S.items);
@@ -1294,6 +1338,57 @@ $$(".tabbar button").forEach(b=>b.addEventListener("click", ()=>switchTab(b.data
 });
 $("#btnCsvOut").addEventListener("click", exportCSV);
 
+/* ===== カレンダー（集計タブ） v2026.10.05-13 ===== */
+const CAL = { ym: "", sel: "" };
+function calShift(ym, d){ const [y,m] = ym.split("-").map(Number); const t = new Date(y, m-1+d, 1); return t.getFullYear()+"-"+String(t.getMonth()+1).padStart(2,"0"); }
+function calDayMap(ym){
+  const map = {};
+  const g = k => (map[k] = map[k] || { list:[], sell:[] });
+  S.items.forEach(it=>{
+    if(it.listDate && it.listDate.slice(0,7) === ym) g(it.listDate).list.push(it);
+    if(it.sellDate && it.sellDate.slice(0,7) === ym) g(it.sellDate).sell.push(it);
+  });
+  return map;
+}
+function renderCalendar(){
+  const grid = document.getElementById("calGrid"); if(!grid) return;
+  if(!CAL.ym) CAL.ym = ymToday();
+  const ym = CAL.ym, [y,m] = ym.split("-").map(Number);
+  const map = calDayMap(ym), today = todayISO();
+  document.getElementById("calTitle").textContent = `${y}年${m}月`;
+  let tl = 0, ts = 0, sales = 0;
+  Object.values(map).forEach(v=>{ tl += v.list.length; ts += v.sell.length; v.sell.forEach(it=>{ sales += numOr(it.soldPrice); }); });
+  document.getElementById("calSum").innerHTML =
+    `<span class="l"><i></i>出品 <b>${tl}</b>件</span><span class="s"><i></i>販売 <b>${ts}</b>件</span><span>売上 <b>${yen(sales)}</b></span>`;
+  const first = new Date(y, m-1, 1).getDay(), days = new Date(y, m, 0).getDate();
+  let h = ["日","月","火","水","木","金","土"].map((w,i)=>`<div class="dow${i===0?" sun":i===6?" sat":""}">${w}</div>`).join("");
+  for(let i=0;i<first;i++) h += `<div class="d empty"></div>`;
+  for(let d=1; d<=days; d++){
+    const key = `${ym}-${String(d).padStart(2,"0")}`, v = map[key], dow = (first + d - 1) % 7;
+    const cls = ["d", dow===0?"sun":"", dow===6?"sat":"", key===today?"is-today":"", key===CAL.sel?"sel":""].filter(Boolean).join(" ");
+    h += `<div class="${cls}" data-day="${key}" role="button" aria-label="${m}月${d}日 出品${v?v.list.length:0}件 販売${v?v.sell.length:0}件">
+      <span class="n">${d}</span><span class="cs">${v&&v.list.length?`<span class="c l">${v.list.length}</span>`:""}${v&&v.sell.length?`<span class="c s">${v.sell.length}</span>`:""}</span></div>`;
+  }
+  grid.innerHTML = h;
+  renderCalDetail(map);
+}
+function renderCalDetail(map){
+  const box = document.getElementById("calDetail"); if(!box) return;
+  if(!CAL.sel || CAL.sel.slice(0,7) !== CAL.ym){ box.innerHTML = `<p class="foot" style="margin:0">日付をタップすると、その日の出品・販売した商品が出ます。</p>`; return; }
+  const v = (map || calDayMap(CAL.ym))[CAL.sel] || { list:[], sell:[] };
+  const [, mm, dd] = CAL.sel.split("-").map(Number);
+  const li = (it, kind) => `<li><span><span class="tag ${kind}">${kind==="s"?"販売":"出品"}</span>${esc(it.code?it.code+" ":"")}${esc(it.name||"（名前なし）")}</span><span>${kind==="s"?yen(numOr(it.soldPrice)):""}</span></li>`;
+  const rows = v.sell.map(it=>li(it,"s")).concat(v.list.map(it=>li(it,"l"))).join("");
+  box.innerHTML = `<h3>${mm}月${dd}日　出品 ${v.list.length}件／販売 ${v.sell.length}件</h3>` + (rows ? `<ul>${rows}</ul>` : `<p class="foot" style="margin:0">この日の出品・販売はありません。</p>`);
+}
+document.getElementById("calCard").addEventListener("click", e=>{
+  const nav = e.target.closest("[data-cal]");
+  if(nav){ const d = Number(nav.dataset.cal); CAL.ym = d === 0 ? ymToday() : calShift(CAL.ym || ymToday(), d); if(d === 0) CAL.sel = todayISO(); renderCalendar(); return; }
+  const day = e.target.closest("[data-day]");
+  if(day){ CAL.sel = CAL.sel === day.dataset.day ? "" : day.dataset.day; renderCalendar(); }
+});
+
+
 /* ===== 収支アプリ用 書き出し（v2026.10.01-11） =====
    売れた商品だけが対象。仕入先が「不用品」のものは帳簿外CSVへ、それ以外は売上CSV＋経費CSVへ。 */
 const OFF_SUPPLIER = "不用品";
@@ -1540,5 +1635,6 @@ sb.auth.getSession().then(({ data }) => {
 setTimeout(() => { if(!settled && !session) showLogin(); }, 3000);
 })();
 </script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
