@@ -112,6 +112,8 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--ink);box
 input[type=date]{font-family:var(--f-num);font-size:17px;letter-spacing:.04em}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.feehint{display:block;font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.5}
+.feehint b{color:var(--listed);font-weight:700}
 input.num{font-family:var(--f-num);font-size:20px;letter-spacing:.03em;font-weight:600}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
 .chips button{
@@ -301,7 +303,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.05-13 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.12-14 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -399,6 +401,12 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
           <input type="number" inputmode="decimal" class="num" id="f-ship" placeholder="210">
         </label>
       </div>
+
+      <label class="fld-sold">
+        <span class="lbl">手数料（実額・手入力）</span>
+        <input type="number" inputmode="decimal" class="num" id="f-feeamt" placeholder="空欄なら ％ で自動計算">
+        <span class="feehint" id="feeHint"></span>
+      </label>
 
       <label class="fld-sold">
         <span class="lbl">消費税（任意）</span>
@@ -647,17 +655,20 @@ function save(){
 }
 
 /* ============ 計算（帳票と同じ式） ============ */
+function hasFeeAmt(it){ return it && it.feeAmt !== undefined && it.feeAmt !== null && String(it.feeAmt).trim() !== ""; }
 function calc(it){
   const feePct = numOr(it.feePct);
   const sold = !!it.sellDate;
   const price = numOr(it.soldPrice);
-  const fee  = sold && price ? r1(price * feePct / 100) : 0;
+  /* 手数料の実額が入っていればそれを使う（Yahoo!フリマなど％で割り切れない場合） */
+  const feeManual = hasFeeAmt(it);
+  const fee  = sold && price ? (feeManual ? r1(numOr(it.feeAmt)) : r1(price * feePct / 100)) : 0;
   const pay  = sold && price ? r1(price - fee - numOr(it.ship) - numOr(it.tax)) : 0;
   const profit = sold && price ? r1(pay - numOr(it.cost)) : 0;
   const margin = (sold && price) ? profit / price : 0;
   const stockAmt = sold ? 0 : numOr(it.cost);
   const status = sold ? "sold" : (it.listDate ? "listed" : "stock");
-  return { fee, pay, profit, margin, stockAmt, status };
+  return { fee, pay, profit, margin, stockAmt, status, feeManual };
 }
 const STATUS_JP = { stock:"在庫（未出品）", listed:"出品中", sold:"売却済" };
 const STAMP_JP = { stock:"在庫", listed:"出品中", sold:"売却済" };
@@ -793,10 +804,17 @@ function setStatus(st){
 function drawPreview(){
   const it = readForm();
   const c = calc(it);
+  const hint = $("#feeHint");
+  if(hint){
+    const price = numOr(it.soldPrice), auto = price ? r1(price * numOr(it.feePct) / 100) : 0;
+    hint.innerHTML = c.feeManual
+      ? `<b>手入力の金額を使います</b>（${pct(numOr(it.feePct)/100)}なら ${yen1(auto)}）。空欄にすると自動計算に戻ります`
+      : (price ? `いまは ${pct(numOr(it.feePct)/100)} で自動計算：${yen1(auto)}` : "");
+  }
   if(U.formStatus === "sold"){
     const cls = c.profit >= 0 ? "gain" : "loss";
     $("#preview").innerHTML =
-      `<div class="pr"><span>手数料 ${pct(numOr(it.feePct)/100)}</span><b>${yen1(c.fee)}</b></div>` +
+      `<div class="pr"><span>手数料 ${c.feeManual ? "（手入力）" : pct(numOr(it.feePct)/100)}</span><b>${yen1(c.fee)}</b></div>` +
       `<div class="pr"><span>送料 ＋ 消費税</span><b>${yen1(numOr(it.ship)+numOr(it.tax))}</b></div>` +
       `<hr><div class="pr"><span>振込金額</span><b>${yen1(c.pay)}</b></div>` +
       `<div class="pr big"><span>純利益</span><b class="${cls}">${c.profit>=0?"＋":"－"}${yen1(Math.abs(c.profit))}</b></div>` +
@@ -821,6 +839,7 @@ function readForm(){
     soldPrice: numOr($("#f-price").value),
     channel: $("#f-channel").value,
     feePct: numOr($("#f-feepct").value, 10),
+    feeAmt: String($("#f-feeamt").value).trim() === "" ? "" : numOr($("#f-feeamt").value),
     ship: numOr($("#f-ship").value),
     tax: numOr($("#f-tax").value),
     memo: $("#f-memo").value.trim()
@@ -995,6 +1014,7 @@ function fillForm(it){
   $("#f-price").value = it.soldPrice || "";
   $("#f-channel").value = it.channel || "メルカリ";
   $("#f-feepct").value = (it.feePct === 0 || it.feePct) ? it.feePct : 10;
+  $("#f-feeamt").value = hasFeeAmt(it) ? it.feeAmt : "";
   $("#f-ship").value = it.ship || "";
   $("#f-tax").value = it.tax || "";
   $("#f-memo").value = it.memo || "";
@@ -1142,7 +1162,7 @@ function renderData(){
   $("#dataStat").innerHTML = `登録 <b>${t.n}</b> 件 ／ 在庫 <b>${t.inStock}</b> 点 ／ 累計売上 <b>${yen(t.sales)}</b> ／ 累計利益 <b>${yen(t.profit)}</b>
     <div style="font-size:11.5px;color:var(--ink3);margin-top:3px">この端末に保存中のデータ量：約 ${(bytes/1024).toFixed(1)} KB</div>`;
 }
-const CSV_HEAD = ["管理番号","仕入れ回","発注日","番号","商品名","売れたら✔︎","仕入先","仕入単価","予想売価","販売価格","在庫金額","販路","手数料％","手数料","消費税","送料","出品日","販売日","振込金額","純利益","利益率","メモ"];
+const CSV_HEAD = ["管理番号","仕入れ回","発注日","番号","商品名","売れたら✔︎","仕入先","仕入単価","予想売価","販売価格","在庫金額","販路","手数料％","手数料","消費税","送料","出品日","販売日","振込金額","純利益","利益率","メモ","手数料（手入力）"];
 function csvCell(v){ const s = String(v == null ? "" : v); return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s; }
 function exportCSV(){
   if(!S.items.length){ toast("書き出すデータがありません"); return; }
@@ -1151,7 +1171,7 @@ function exportCSV(){
     const c = calc(it);
     rows.push([it.code||"", it.batch||"", it.orderDate||"", numOr(it.no), it.name, c.status==="sold"?"TRUE":"FALSE", it.supplier||"", (it.cost===0?0:(it.cost||"")), it.expPrice||"", it.soldPrice||"",
       c.stockAmt||0, it.channel&&c.status==="sold"?it.channel:"", numOr(it.feePct), c.fee||0, it.tax||0, it.ship||0,
-      it.listDate||"", it.sellDate||"", c.pay||0, c.profit||0, c.status==="sold"?(r1(c.margin).toFixed(4)):"", it.memo||""]
+      it.listDate||"", it.sellDate||"", c.pay||0, c.profit||0, c.status==="sold"?(r1(c.margin).toFixed(4)):"", it.memo||"", hasFeeAmt(it)?numOr(it.feeAmt):""]
       .map(csvCell).join(","));
   });
   const blob = new Blob(["\ufeff"+rows.join("\r\n")], {type:"text/csv;charset=utf-8"});
@@ -1198,6 +1218,7 @@ const HMAP = [
   ["soldPrice", ["販売価格","売値","販売金額"]],
   ["channel", ["販路","サイト"]],
   ["feePct", ["手数料％","手数料%","手数料"]],
+  ["feeAmt", ["手数料（手入力）","手数料(手入力)","手数料手入力"]],
   ["ship", ["送料"]],
   ["tax", ["消費税","税"]],
   ["listDate", ["出品日"]],
@@ -1227,6 +1248,7 @@ function importCSV(text, mode){
       name, code: read(r,"code"), batch: read(r,"batch"), orderDate: normDate(read(r,"orderDate")), supplier: read(r,"supplier"),
       cost: numOr(read(r,"cost")), expPrice: numOr(read(r,"expPrice")), soldPrice: numOr(read(r,"soldPrice")),
       channel: read(r,"channel") || "メルカリ", feePct: fee,
+      feeAmt: read(r,"feeAmt") === "" ? "" : numOr(read(r,"feeAmt")),
       ship: numOr(read(r,"ship")), tax: numOr(read(r,"tax")),
       listDate, sellDate, memo: read(r,"memo")
     };
@@ -1636,5 +1658,6 @@ setTimeout(() => { if(!settled && !session) showLogin(); }, 3000);
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
