@@ -114,6 +114,10 @@ input[type=date]{font-family:var(--f-num);font-size:17px;letter-spacing:.04em}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
 .feehint{display:block;font-size:11.5px;color:var(--ink3);margin-top:3px;line-height:1.5}
 .feehint b{color:var(--listed);font-weight:700}
+.bdrow{display:grid;grid-template-columns:74px 1fr;gap:10px;align-items:center;margin-bottom:10px}
+.bdrow .bdlbl{display:block;font-size:11px;color:var(--ink3);font-family:var(--f-ui)}
+.bdrow .bdnum{display:block;font-family:var(--f-num);font-size:17px}
+.bdrow input{width:100%;background:rgba(255,255,255,.7);border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:14px}
 input.num{font-family:var(--f-num);font-size:20px;letter-spacing:.03em;font-weight:600}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
 .chips button{
@@ -303,7 +307,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.12-14 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.22-15 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -325,8 +329,9 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
             <input type="text" id="f-batch" inputmode="text" placeholder="7">
           </label>
           <label>
-            <span class="lbl">発注日</span>
+            <span class="lbl">発注日（仕入れ回ごと）</span>
             <input type="date" id="f-orderdate">
+            <span class="feehint" id="odHint"></span>
           </label>
         </div>
         <div class="coderow">
@@ -517,13 +522,14 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
         <li><span class="n">2</span><div><b>商品名と仕入単価を入れて保存</b><p>1点ずつが一点物なので、<b>1商品＝1行＝1つの管理番号</b>。<b>7-31</b> のように自動で番号が付きます。仕入先・予想売価・発注日も一緒に入れておくと集計が楽になります。</p></div></li>
         <li><span class="n">3</span><div><b>管理番号を出品ページに貼る</b><p>メルカリ・ラクマ・Yahoo!フリマの商品説明に管理番号を書き込んでおくと、売れたときに在庫管理の商品とすぐ一致します。番号は<b>タップでコピー</b>できます。</p></div></li>
         <li><span class="n">4</span><div><b>出品したら「出品中」、売れたら「売却済」</b><p>状態を切り替えるだけで入力欄が変わります。「売却済」では販売価格・送料・販売日を入れると、<b>手数料・振込金額・純利益・利益率を自動計算</b>します。</p></div></li>
-        <li><span class="n">5</span><div><b>次の買い物では「＋ 新しい仕入れ回」</b><p>発注日が今日になり、連番はまた1から始まります（次の買い物なら <b>8-1</b>, <b>8-2</b>…）。</p></div></li>
+        <li><span class="n">5</span><div><b>次の買い物では「＋ 新しい仕入れ回」</b><p>発注日はその回の日付（最初に保存した日）が自動で入り、連番はまた1から始まります。同じ回の続きを入れるときは、前に入れた日付が自動で入ります。</p></div></li>
       </ol>
     </div>
 
     <div class="sec"><h2>よく使う操作</h2><span class="line"></span></div>
     <div class="card">
       <div class="helprow"><b>間違えたところを直す</b><p>一覧のカードの<b>「編集」</b>を押すと、入力画面に内容が入ります。直して「この内容で更新する」を押してください。</p></div>
+      <div class="helprow"><b>発注日をまちがえた</b><p>「データ」タブの<b>仕入れ回ごとの発注日</b>で直せます。直すと、その回の商品の発注日も同じ日にそろいます（仕入先が不用品の商品は当日のまま）。</p></div>
       <div class="helprow"><b>消したいとき</b><p>カードの<b>「削除」</b>を押すと確認が出ます。消すと元に戻せません。</p></div>
       <div class="helprow"><b>特定の商品をさがす</b><p>一覧タブの検索欄に <b>7-10</b> のように管理番号を入れると、その商品だけ出ます。商品名や仕入先でも探せます。</p></div>
       <div class="helprow"><b>出品日を入れるのを忘れた</b><p>「出品した」を押すと出品日が今日で入ります。後から編集で日付を直せます。</p></div>
@@ -553,6 +559,11 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
   <!-- ================= データ ================= -->
   <section class="panel" id="panel-data">
     <div class="stat" id="dataStat"></div>
+    <div class="dl" id="batchDateBox">
+      <p class="foot" style="margin:0 0 8px"><b>仕入れ回ごとの発注日</b>（入力を始めた回から自動で入り、同じ回の商品は同じ日付になります。あとから直せます）</p>
+      <div id="batchDateList"></div>
+      <p class="foot" style="margin:2px 0 0">日付を直すと、<b>その回の商品の発注日も同じ日にそろえます</b>（仕入先が不用品の商品は当日のままにします）。</p>
+    </div>
     <div class="dl" id="kakeiBox">
       <p class="foot" style="margin:0 0 6px"><b>収支アプリ用に書き出す</b>（販売日の月で絞り込み。空欄なら全期間）</p>
       <input type="month" id="kkMonth" style="width:100%;margin-bottom:8px">
@@ -646,7 +657,7 @@ function setAgeDays(d){
 function load(){
   try{
     const raw = localStorage.getItem(KEY);
-    if(raw){ const o = JSON.parse(raw); S.items = Array.isArray(o.items)?o.items:[]; S.targets = o.targets||{}; S.recent = Object.assign({cost:[],supplier:[],ship:[]}, o.recent||{}); S.ui = Object.assign({ageDays:30}, o.ui||{}); }
+    if(raw){ const o = JSON.parse(raw); S.items = Array.isArray(o.items)?o.items:[]; S.targets = o.targets||{}; S.recent = Object.assign({cost:[],supplier:[],ship:[]}, o.recent||{}); S.ui = Object.assign({ageDays:30}, o.ui||{}); S.batchOrder = Object.assign({}, o.batchOrder||{}); }
   }catch(e){ console.warn("load failed", e); }
 }
 function save(){
@@ -685,6 +696,87 @@ function maxSeq(batch){
 }
 function nextCodeFor(batch){ return batch ? (batch + "-" + (maxSeq(batch) + 1)) : ""; }
 function batchesInUse(){ return Array.from(new Set(S.items.map(i=>i.batch).filter(Boolean))); }
+
+/* ============ 発注日（仕入れ回ごとに固定） ============ */
+/* 仕入先が「不用品」か（空白ゆらぎ・全角半角を無視して比較） */
+function isJunkSupplier(sup){
+  const t = String(sup == null ? "" : sup);
+  try{ return t.normalize("NFKC").replace(/[\s\u3000]/g, "") === "不用品"; }
+  catch(e){ return t.replace(/[\s\u3000]/g, "") === "不用品"; }
+}
+/* その仕入れ回の固定した発注日（未記録なら登録済み商品から拾う） */
+function batchOrderDate(b){
+  const k = String(b == null ? "" : b).trim(); if(!k) return "";
+  if(S.batchOrder && S.batchOrder[k]) return S.batchOrder[k];
+  const ds = S.items.filter(i=>String(i.batch||"") === k && i.orderDate && !isJunkSupplier(i.supplier))
+                     .map(i=>i.orderDate).sort();
+  return ds[0] || "";
+}
+function setBatchOrder(b, d){
+  const k = String(b == null ? "" : b).trim(); if(!k) return;
+  S.batchOrder = S.batchOrder || {};
+  if(d) S.batchOrder[k] = d; else delete S.batchOrder[k];
+}
+let odSnap = null;
+function atv(v){ return String(v==null?"":v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+/* 説明文を出しつつ「いまの状態」を覚える（勝手に入れ直さないため） */
+function refreshOrderHint(){
+  const el = $("#odHint");
+  const b = $("#f-batch").value.trim();
+  const junk = isJunkSupplier($("#f-supplier").value);
+  const val = $("#f-orderdate").value || "";
+  const fixed = b ? batchOrderDate(b) : "";
+  const n = b ? S.items.filter(i=>String(i.batch||"") === b && !isJunkSupplier(i.supplier)).length : 0;
+  let t = "";
+  if(junk) t = "仕入先が<b>不用品</b>なので当日（" + todayISO() + "）を入れます。随時変わるため固定しません。";
+  else if(fixed && val === fixed) t = "仕入れ回 <b>" + esc(b) + "</b> の発注日（固定）。" + (n ? "登録 " + n + "点。" : "");
+  else if(fixed) t = "仕入れ回 <b>" + esc(b) + "</b> の固定日は <b>" + fixed + "</b>。回ごとに変えるには「データ」タブで。";
+  else if(b) t = "この回ではじめての商品です。保存するとこの日付が固定されます。";
+  if(el) el.innerHTML = t;
+  odSnap = { batch: b, junk: junk };
+}
+/* 仕入れ回や仕入先が変わったときだけ、発注日を自動で入れ直す */
+function syncOrderDateUI(){
+  const b = $("#f-batch").value.trim();
+  const junk = isJunkSupplier($("#f-supplier").value);
+  const p = odSnap;
+  if(!p || p.batch !== b || p.junk !== junk){
+    if(junk) $("#f-orderdate").value = todayISO();
+    else if(b) $("#f-orderdate").value = batchOrderDate(b) || todayISO();
+  }
+  refreshOrderHint();
+}
+function renderBatchDates(){
+  const box = document.getElementById("batchDateList"); if(!box) return;
+  const list = batchesInUse().sort((a,b)=> batchNum(b) - batchNum(a));
+  if(!list.length){ box.innerHTML = `<p class="foot">まだ商品がありません。商品を保存すると、その仕入れ回がここに出ます。</p>`; return; }
+  box.innerHTML = list.map(b=>{
+    const its = S.items.filter(i=>String(i.batch||"") === b);
+    const jn = its.filter(i=>isJunkSupplier(i.supplier)).length;
+    const d = batchOrderDate(b);
+    return `<div class="bdrow">
+      <div><span class="bdlbl">仕入れ回</span><b class="bdnum">${atv(b)}</b></div>
+      <div>
+        <input type="date" data-bdate="${atv(b)}" value="${atv(d)}">
+        <span class="feehint">商品 ${its.length}点${jn ? "（不用品 " + jn + "点を除く）" : ""}${d ? "" : " ／ 日付が未設定"}</span>
+      </div>
+    </div>`;
+  }).join("");
+}
+/* データタブで発注日を直す：その回の商品（不用品以外）も同じ日にそろえる */
+function applyBatchDate(b, d){
+  const k = String(b);
+  if(!d){ if(S.batchOrder) delete S.batchOrder[k]; save(); renderAll(); toast("仕入れ回 " + k + " の発注日を未設定に戻しました"); return; }
+  setBatchOrder(k, d);
+  let n = 0;
+  S.items.forEach(it=>{
+    if(String(it.batch||"") !== k || isJunkSupplier(it.supplier)) return;
+    if(it.orderDate !== d){ it.orderDate = d; n++; }
+  });
+  odSnap = null;
+  save(); renderAll();
+  toast(`仕入れ回 ${k} の発注日を ${d} にしました` + (n ? `（商品 ${n}点も更新）` : ""));
+}
 function lastBatch(){
   const sorted = S.items.slice().sort((a,b)=> numOr(b.no) - numOr(a.no));
   return sorted.find(i=>i.batch) || null;
@@ -862,6 +954,8 @@ function clearForm(keepSticky){
   setStatus("stock");
   drawChips();
   updateBatchUI();
+  odSnap = null;          /* 次の1点は「その回の固定日」で入れ直す */
+  syncOrderDateUI();
 }
 function drawChips(){
   const costs = S.recent.cost || [];
@@ -884,6 +978,9 @@ function submitForm(e){
   if(U.formStatus === "sold" && !it.sellDate) it.sellDate = todayISO();
   if(U.formStatus !== "sold"){ it.soldPrice = 0; it.sellDate = ""; }
   if(U.formStatus === "stock"){ it.listDate = ""; }
+
+  /* 発注日を仕入れ回ごとに固定する（不用品は当日のまま。回の日付にはしない） */
+  if(it.batch && it.orderDate && !isJunkSupplier(it.supplier) && !batchOrderDate(it.batch)) setBatchOrder(it.batch, it.orderDate);
 
   const wasEdit = !!U.editId;
   if(wasEdit){
@@ -1008,6 +1105,7 @@ function fillForm(it){
   $("#f-name").value = it.name || "";
   $("#f-batch").value = it.batch || "";
   $("#f-orderdate").value = it.orderDate || "";
+  refreshOrderHint();
   $("#f-supplier").value = it.supplier || "";
   $("#f-cost").value = it.cost || "";
   $("#f-exp").value = it.expPrice || "";
@@ -1293,7 +1391,7 @@ function switchTab(tab){
   var _sc2=document.querySelector("main"); if(_sc2){ _sc2.scrollTop=0; }
 }
 function renderAll(){
-  renderStrip(); drawChips(); renderList(); renderStats(); renderData(); drawPreview();
+  renderStrip(); drawChips(); renderList(); renderStats(); renderData(); renderBatchDates(); drawPreview();
 }
 let toastTimer;
 function toast(msg){
@@ -1304,7 +1402,18 @@ function toast(msg){
 /* ============ 起動 ============ */
 load();
 $$(".seg button").forEach(b=>b.addEventListener("click", ()=>setStatus(b.dataset.status)));
-$("#f-batch").addEventListener("input", updateBatchUI);
+$("#f-batch").addEventListener("input", ()=>{ updateBatchUI(); syncOrderDateUI(); });
+$("#f-supplier").addEventListener("input", syncOrderDateUI);
+$("#f-supplier").addEventListener("change", syncOrderDateUI);
+/* 仕入先の候補ボタンなど、値が直接書きかわる操作にも追従（変わった時だけ入れ直す） */
+document.addEventListener("click", ()=>setTimeout(syncOrderDateUI, 0));
+(function(){
+  const bdl = document.getElementById("batchDateList");
+  if(bdl) bdl.addEventListener("change", e=>{
+    const inp = e.target.closest("input[data-bdate]"); if(!inp) return;
+    applyBatchDate(inp.dataset.bdate, inp.value);
+  });
+})();
 $("#btnCopyCode").addEventListener("click", e=>{
   const code = $("#codePreview").textContent;
   if(!code || code === "—"){ toast("先に仕入れ回を入れてください"); $("#f-batch").focus(); return; }
@@ -1318,6 +1427,7 @@ $("#btnNewBatch").addEventListener("click", ()=>{
   $("#f-orderdate").value = todayISO();
   $("#f-supplier").value = "";
   updateBatchUI();
+  syncOrderDateUI();
   toast(`仕入れ回 ${nxt} をはじめます（連番は1から）`);
 });
 $$("#itemForm input, #itemForm select").forEach(el=>{
@@ -1486,7 +1596,7 @@ $("#btnSample").addEventListener("click", insertSample);
 $("#btnClear").addEventListener("click", ()=>{
   if(!S.items.length){ toast("データは空です"); return; }
   if(confirm(`登録中の${S.items.length}件をすべて消します。元に戻せません。よろしいですか？`)){
-    S.items = []; S.targets = {}; save(); renderAll(); toast("全消去しました");
+    S.items = []; S.targets = {}; S.batchOrder = {}; odSnap = null; save(); renderAll(); toast("全消去しました");
   }
 });
 function hookFile(id, handler){
@@ -1507,7 +1617,7 @@ hookFile("jsonIn", txt => {
   const o = JSON.parse(txt);
   if(!o || !Array.isArray(o.items)){ toast("バックアップファイルではありません"); return; }
   if(S.items.length && !confirm(`今の${S.items.length}件を、バックアップの${o.items.length}件に入れかえます。よろしいですか？`)) return;
-  S = { items:o.items, targets:o.targets||{}, recent:Object.assign({cost:[],supplier:[],ship:[]}, o.recent||{}) };
+  S = { items:o.items, targets:o.targets||{}, recent:Object.assign({cost:[],supplier:[],ship:[]}, o.recent||{}), batchOrder:Object.assign({}, o.batchOrder||{}) };
   save(); renderAll(); toast("復元しました");
 });
 function syncTop(){
@@ -1522,6 +1632,7 @@ if(document.fonts && document.fonts.ready) document.fonts.ready.then(syncTop);
   $("#f-batch").value = last ? String(last.batch) : "1";
   $("#f-orderdate").value = todayISO();
   updateBatchUI();
+  syncOrderDateUI();
 })();
 /* ---- 背景きりかえ ---- */
 function applyBg(k){
@@ -1658,6 +1769,5 @@ setTimeout(() => { if(!settled && !session) showLogin(); }, 3000);
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
-<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v4bc70e2c01a94c73b74392e4234840661791215815920" integrity="sha512-L0ha0OXavK/8okipN9F8BtP84dg9DUhPERbBXzwI6dgTA55d2+yweo3pn5CSFYs45/r8md2+xvUPtTdvTNRfjA==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
