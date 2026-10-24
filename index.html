@@ -118,6 +118,9 @@ input[type=date]{font-family:var(--f-num);font-size:17px;letter-spacing:.04em}
 .bdrow .bdlbl{display:block;font-size:11px;color:var(--ink3);font-family:var(--f-ui)}
 .bdrow .bdnum{display:block;font-family:var(--f-num);font-size:17px}
 .bdrow input{width:100%;background:rgba(255,255,255,.7);border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:14px}
+.mrow{display:flex;align-items:center;gap:10px}
+.mrow .mlab{font-size:12.5px;color:var(--ink2);flex:0 0 auto}
+#stMonth{flex:1;min-width:0;background:rgba(255,255,255,.7);border:1.5px solid var(--line);border-radius:9px;padding:9px 10px;font-size:14px;font-family:var(--f-ui)}
 input.num{font-family:var(--f-num);font-size:20px;letter-spacing:.03em;font-weight:600}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:-4px 0 12px}
 .chips button{
@@ -307,7 +310,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.22-15 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.23-16 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -456,10 +459,19 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
   <!-- ================= 集計 ================= -->
   <section class="panel" id="panel-stats">
+    <div class="sec"><h2>見る期間</h2><span class="line"></span><span class="note">月を選ぶと、この下の数字がその月に切りかわります</span></div>
+    <div class="card">
+      <div class="mrow">
+        <label class="mlab" for="stMonth">集計する月</label>
+        <select id="stMonth"></select>
+      </div>
+      <p class="foot" id="stBasis" style="margin:9px 0 0"></p>
+    </div>
+
     <div class="sec"><h2>ぜんぶの数字</h2><span class="line"></span><span class="note" id="statNote"></span></div>
     <div class="kpis" id="kpis"></div>
 
-    <div class="sec"><h2>今月の目標</h2><span class="line"></span><span class="note" id="goalMonth"></span></div>
+    <div class="sec"><h2>目標</h2><span class="line"></span><span class="note" id="goalMonth"></span></div>
     <div class="card">
       <div class="goal">
         <label>目標 売上<input type="number" inputmode="decimal" class="num" id="g-sales"></label>
@@ -485,19 +497,19 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
       <div class="caldetail" id="calDetail"></div>
     </div>
 
-    <div class="sec"><h2>月べつの実績</h2><span class="line"></span><span class="note">販売日・出品日をもとに集計</span></div>
+    <div class="sec"><h2>月べつの実績</h2><span class="line"></span><span class="note" id="monthNote">販売日・出品日をもとに集計</span></div>
     <div class="card scroll"><table id="monthTable"></table></div>
 
-    <div class="sec"><h2>仕入れ回べつの在庫</h2><span class="line"></span><span class="note">仕入れごとの残り</span></div>
+    <div class="sec"><h2>仕入れ回べつの在庫</h2><span class="line"></span><span class="note" id="batchNote">仕入れごとの残り</span></div>
     <div class="card scroll"><table id="batchTable"></table></div>
 
-    <div class="sec"><h2>仕入先べつ</h2><span class="line"></span></div>
+    <div class="sec"><h2>仕入先べつ</h2><span class="line"></span><span class="note" id="supNote"></span></div>
     <div class="card scroll"><table id="supTable"></table></div>
 
-    <div class="sec"><h2>販路べつ</h2><span class="line"></span></div>
+    <div class="sec"><h2>販路べつ</h2><span class="line"></span><span class="note" id="chNote"></span></div>
     <div class="card scroll"><table id="chTable"></table></div>
 
-    <div class="sec"><h2>在庫の古い順（滞留）</h2><span class="line"></span><span class="note">売れ残りのみ・古い順</span></div>
+    <div class="sec"><h2>在庫の古い順（滞留）</h2><span class="line"></span><span class="note" id="ageNote">売れ残りのみ・古い順</span></div>
     <div class="card">
       <div class="filters agebar" id="agebar2" role="group" aria-label="滞留の日数">
         <button type="button" data-age="30">30日以上</button>
@@ -508,7 +520,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
       <div class="scroll" style="margin-top:9px"><table id="lotTable"></table></div>
     </div>
 
-    <div class="sec"><h2>赤字の商品</h2><span class="line"></span><span class="note">売ったのに仕入を下回ったもの</span></div>
+    <div class="sec"><h2>赤字の商品</h2><span class="line"></span><span class="note" id="negNote">売ったのに仕入を下回ったもの</span></div>
     <div class="card"><div id="negBox"></div></div>
   </section>
 
@@ -530,6 +542,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
     <div class="card">
       <div class="helprow"><b>間違えたところを直す</b><p>一覧のカードの<b>「編集」</b>を押すと、入力画面に内容が入ります。直して「この内容で更新する」を押してください。</p></div>
       <div class="helprow"><b>発注日をまちがえた</b><p>「データ」タブの<b>仕入れ回ごとの発注日</b>で直せます。直すと、その回の商品の発注日も同じ日にそろいます（仕入先が不用品の商品は当日のまま）。</p></div>
+      <div class="helprow"><b>月ごとの数字を見る</b><p>「集計」タブの一番上の<b>集計する月</b>で月を選ぶと、下の数字がその月に切りかわります。売上・利益・手数料は<b>販売日</b>、仕入れと出品は<b>発注日・出品日</b>、在庫は<b>その月末時点</b>で数えます。「すべての期間」に戻すと累計です。</p></div>
       <div class="helprow"><b>消したいとき</b><p>カードの<b>「削除」</b>を押すと確認が出ます。消すと元に戻せません。</p></div>
       <div class="helprow"><b>特定の商品をさがす</b><p>一覧タブの検索欄に <b>7-10</b> のように管理番号を入れると、その商品だけ出ます。商品名や仕入先でも探せます。</p></div>
       <div class="helprow"><b>出品日を入れるのを忘れた</b><p>「出品した」を押すと出品日が今日で入ります。後から編集で日付を直せます。</p></div>
@@ -1131,24 +1144,138 @@ function fillForm(it){
 }
 
 /* ============ 画面：集計 ============ */
-function renderStats(){
-  const t = totals(S.items);
-  $("#statNote").textContent = `登録 ${t.n}件`;
-  const kpi = (k,v,s="")=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
-  $("#kpis").innerHTML =
-    kpi("在庫（未販売）", `${t.inStock}<small>点</small>`, `うち出品中 ${t.listed}／未出品 ${t.stock}`) +
-    kpi("在庫金額", yen(t.stockAmt), "仕入単価の合計") +
-    kpi("累計販売", `${t.sold}<small>点</small>`, `販売率 ${pct(t.sellRate)}`) +
-    kpi("累計売上", yen(t.sales), `平均単価 ${yen(t.avgSale)}`) +
-    kpi("累計純利益", yen(t.profit), `平均利益率 ${pct(t.margin)}`) +
-    kpi("平均回転", t.avgDays?`${t.avgDays.toFixed(1)}<small>日</small>`:"—", "出品→販売") +
-    kpi("赤字の商品", `${t.neg}<small>件</small>`, t.neg?"売価が仕入を下回る":"なし") +
-    kpi("手数料・送料", yen(t.fee + t.ship), "累計");
+/* ============ 集計の期間えらび（v2026.10.23-16） ============
+   売上・利益・手数料 → 販売日 ／ 仕入れ・出品 → 発注日・出品日 ／ 在庫 → その月末時点 */
+function statsMonth(){ return (S.ui && S.ui.stMonth) || ""; }
+function ymJP(k){ const [y,m] = String(k).split("-"); return y + "年" + Number(m) + "月"; }
+function statsMonthLabel(){ const ym = statsMonth(); return ym ? ymJP(ym) : "全期間"; }
+function toISO(d){ return [d.getFullYear(), String(d.getMonth()+1).padStart(2,"0"), String(d.getDate()).padStart(2,"0")].join("-"); }
+function ymEnd(ym){ const [y,m] = ym.split("-").map(Number); return toISO(new Date(y, m, 0)); }
+function inYM(d, ym){ return !!d && String(d).slice(0,7) === ym; }
+function itemOrderDate(it){ return it.orderDate || it.created || ""; }
+function itemBDate(it){ return itemOrderDate(it) || batchOrderDate(it.batch); }
+function statsMonthList(){
+  const set = {};
+  const add = d => { const k = String(d||"").slice(0,7); if(/^\d{4}-\d{2}$/.test(k)) set[k] = 1; };
+  S.items.forEach(it=>{ add(it.sellDate); add(it.listDate); add(it.orderDate); add(it.created); });
+  add(ymToday());
+  return Object.keys(set).sort().reverse();
+}
+function statsMonthOptions(){
+  const el = document.getElementById("stMonth"); if(!el) return;
+  const cur = statsMonth();
+  const list = statsMonthList();
+  if(cur && !list.includes(cur)) list.unshift(cur);
+  const html = `<option value="">すべての期間</option>` +
+    list.map(k=>`<option value="${k}">${ymJP(k)}</option>`).join("");
+  if(el.dataset.opts !== html){ el.innerHTML = html; el.dataset.opts = html; }
+  el.value = cur;
+}
+function setStatsMonth(ym){
+  S.ui = S.ui || {}; S.ui.stMonth = ym || "";
+  save();
+  if(ym && typeof CAL !== "undefined"){ CAL.ym = ym; CAL.sel = ""; }
+  renderStats();
+}
+/* その月末に在庫だったもの（売れ残り）。年齢もその月末基準で数える */
+function statsInvScope(ym){
+  const end = ym ? ymEnd(ym) : todayISO();
+  return S.items.filter(it=>{
+    const c = calc(it);
+    if(ym){
+      /* 仕入れた日（発注日）がその月末までのもの。月末より後に仕入れたものは在庫に入れない */
+      const buy = it.orderDate || it.created || it.listDate || "";
+      if(buy && String(buy) > end) return false;
+      if(c.status === "sold" && String(it.sellDate) <= end) return false;
+      return true;
+    }
+    return c.status !== "sold";
+  }).map(it=>{
+    /* 経過日数はその月末までに出品していれば出品日から、まだなら仕入れた日から数える */
+    const base = (it.listDate && String(it.listDate) <= end) ? it.listDate : (it.orderDate || it.created || "");
+    const a = base ? Math.round((new Date(end) - new Date(base)) / 86400000) : null;
+    return { it, age: (a !== null && a >= 0 && a < 3650) ? a : null };
+  }).sort((a,b)=> String(stockDate(a.it)).localeCompare(String(stockDate(b.it))));
+}
+function statsScope(){
+  const ym = statsMonth();
+  if(!ym){
+    const t = totals(S.items);
+    t.ym = "";
+    t.bought = t.n;
+    t.boughtAmt = S.items.reduce((a,i)=>a+numOr(i.cost),0);
+    t.listedN = S.items.filter(i=>i.listDate).length;
+    return t;
+  }
+  const end = ymEnd(ym);
+  const sold = S.items.filter(it=> calc(it).status === "sold" && inYM(it.sellDate, ym));
+  const bought = S.items.filter(it=> inYM(itemBDate(it), ym));
+  const inv = statsInvScope(ym);
+  const t = { ym, n:S.items.length, stock:0, listed:0, sold:0, stockAmt:0, sales:0, profit:0,
+              fee:0, ship:0, pay:0, neg:0, days:[], bought:bought.length, boughtAmt:0, listedN:0 };
+  t.boughtAmt = bought.reduce((a,i)=>a+numOr(i.cost),0);
+  t.listedN = S.items.filter(i=> inYM(i.listDate, ym)).length;
+  sold.forEach(it=>{
+    const c = calc(it);
+    t.sold++; t.sales += numOr(it.soldPrice); t.profit += c.profit;
+    t.fee += c.fee; t.ship += numOr(it.ship); t.pay += c.pay;
+    if(c.profit < 0) t.neg++;
+    if(it.listDate && it.sellDate){
+      const d = (new Date(it.sellDate) - new Date(it.listDate)) / 86400000;
+      if(d >= 0 && d < 3650) t.days.push(d);
+    }
+  });
+  inv.forEach(x=>{
+    /* 「出品中」はその月末までに出品していたもの。月末より後に出したものは未出品として数える */
+    const listedThen = !!x.it.listDate && String(x.it.listDate) <= end;
+    if(listedThen) t.listed++; else t.stock++;
+    t.stockAmt += numOr(x.it.cost);
+  });
+  t.inStock = t.stock + t.listed;
+  t.margin = t.sales ? t.profit / t.sales : 0;
+  t.sellRate = (t.sold + t.inStock) ? t.sold / (t.sold + t.inStock) : 0;
+  t.avgSale = t.sold ? t.sales / t.sold : 0;
+  t.avgDays = t.days.length ? t.days.reduce((a,b)=>a+b,0)/t.days.length : 0;
+  return t;
+}
 
-  // 今月の目標
-  const m = ymToday();
+function renderStats(){
+  statsMonthOptions();
+  const ym = statsMonth(), M = !!ym;
+  const t = statsScope();
+  const soldScope = S.items.filter(it=> calc(it).status === "sold" && (!ym || inYM(it.sellDate, ym)));
+  $("#statNote").textContent = M ? statsMonthLabel() : `登録 ${t.n}件`;
+  const basis = document.getElementById("stBasis");
+  if(basis) basis.innerHTML = M
+    ? `<b>${statsMonthLabel()}</b>の数字です。売上・利益・手数料は<b>その月に売れた商品</b>、仕入れ・出品は<b>その月の発注日・出品日</b>、在庫は<b>その月末時点</b>で数えています。「すべての期間」に戻すと累計になります。`
+    : `いまは<b>全期間</b>の数字です。「集計する月」で月を選ぶと、その月の数字に切りかわります。`;
+  const kpi = (k,v,s="")=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
+  $("#kpis").innerHTML = M
+    ? kpi("月末の在庫", `${t.inStock}<small>点</small>`, `うち出品中 ${t.listed}／未出品 ${t.stock}`) +
+      kpi("月末の在庫金額", yen(t.stockAmt), "仕入単価の合計") +
+      kpi("仕入れ", `${t.bought}<small>点</small>`, `仕入金額 ${yen(t.boughtAmt)}`) +
+      kpi("出品", `${t.listedN}<small>点</small>`, "その月に出品した数") +
+      kpi("販売", `${t.sold}<small>点</small>`, `販売率 ${pct(t.sellRate)}`) +
+      kpi("売上", yen(t.sales), `平均単価 ${yen(t.avgSale)}`) +
+      kpi("純利益", yen(t.profit), `利益率 ${pct(t.margin)}`) +
+      kpi("平均回転", t.avgDays?`${t.avgDays.toFixed(1)}<small>日</small>`:"—", "出品→販売") +
+      kpi("赤字の商品", `${t.neg}<small>件</small>`, t.neg?"売価が仕入を下回る":"なし") +
+      kpi("手数料・送料", yen(t.fee + t.ship), "その月に売れた分")
+    : kpi("在庫（未販売）", `${t.inStock}<small>点</small>`, `うち出品中 ${t.listed}／未出品 ${t.stock}`) +
+      kpi("在庫金額", yen(t.stockAmt), "仕入単価の合計") +
+      kpi("仕入れた数", `${t.bought}<small>点</small>`, `仕入金額 ${yen(t.boughtAmt)}`) +
+      kpi("出品した数", `${t.listedN}<small>点</small>`, "出品日が入っているもの") +
+      kpi("累計販売", `${t.sold}<small>点</small>`, `販売率 ${pct(t.sellRate)}`) +
+      kpi("累計売上", yen(t.sales), `平均単価 ${yen(t.avgSale)}`) +
+      kpi("累計純利益", yen(t.profit), `平均利益率 ${pct(t.margin)}`) +
+      kpi("平均回転", t.avgDays?`${t.avgDays.toFixed(1)}<small>日</small>`:"—", "出品→販売") +
+      kpi("赤字の商品", `${t.neg}<small>件</small>`, t.neg?"売価が仕入を下回る":"なし") +
+      kpi("手数料・送料", yen(t.fee + t.ship), "累計");
+
+  // 目標（選んだ月。未選択なら今月）
+  const m = ym || ymToday();
   const mm = byMonth(S.items)[m] || { list:0, sell:0, sales:0, profit:0 };
-  $("#goalMonth").textContent = m.replace("-","年") + "月";
+  $("#goalMonth").textContent = ymJP(m) + (M ? "" : "（今月）");
   const tg = S.targets[m] || {};
   ["g-sales","g-profit","g-list","g-sell"].forEach(id=>{ const el=$("#"+id); if(document.activeElement!==el) el.value = tg[id]===""||tg[id]===undefined?"":tg[id]; });
   const bar = (label, act, goal, money) => {
@@ -1168,7 +1295,10 @@ function renderStats(){
 
   // 月べつ
   const bm = byMonth(S.items);
-  const keys = Object.keys(bm).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort().reverse();
+  let keys = Object.keys(bm).filter(k=>/^\d{4}-\d{2}$/.test(k)).sort().reverse();
+  if(M) keys = keys.includes(ym) ? [ym] : [];
+  const mn = document.getElementById("monthNote");
+  if(mn) mn.textContent = M ? (statsMonthLabel() + "だけ（販売日・出品日）") : "販売日・出品日をもとに集計";
   let rows = "", sum = {list:0,sell:0,sales:0,profit:0};
   keys.forEach(k=>{
     const v = bm[k];
@@ -1182,10 +1312,12 @@ function renderStats(){
     ? `<thead><tr><th>月</th><th>出品</th><th>販売</th><th>売上</th><th>純利益</th><th>売上単価</th><th>販売率</th></tr></thead>
        <tbody>${rows}<tr class="tot"><td>合計</td><td class="n">${sum.list}</td><td class="n">${sum.sell}</td>
        <td class="n">${yen(sum.sales)}</td><td class="n">${yen(sum.profit)}</td><td></td><td></td></tr></tbody>`
-    : `<tbody><tr><td>まだデータがありません。</td></tr></tbody>`;
+    : `<tbody><tr><td>${M ? statsMonthLabel() + "の実績はまだありません。" : "まだデータがありません。"}</td></tr></tbody>`;
 
   // 仕入れ回べつ
-  const bs = byBatch(S.items);
+  const bn = document.getElementById("batchNote");
+  if(bn) bn.textContent = M ? (statsMonthLabel() + "に発注した仕入れ回（発注日がその月の商品だけ）") : "仕入れごとの残り";
+  const bs = byBatch(M ? S.items.filter(it=> inYM(itemBDate(it), ym)) : S.items);
   $("#batchTable").innerHTML = bs.length
     ? `<thead><tr><th>仕入れ回</th><th>発注日</th><th>仕入先</th><th>仕入点数</th><th>在庫</th><th>在庫金額</th><th>販売</th><th>売上</th><th>純利益</th><th>販売率</th></tr></thead><tbody>` +
       bs.map(g=>`<tr><td>${esc(g.batch)}</td><td>${g.order?g.order.replace(/-/g,"/"):"—"}</td><td>${esc(g.supplier||"—")}</td>
@@ -1197,8 +1329,10 @@ function renderStats(){
     : `<tbody><tr><td>まだデータがありません。</td></tr></tbody>`;
 
   // 仕入先べつ
+  const sn = document.getElementById("supNote");
+  if(sn) sn.textContent = M ? (statsMonthLabel() + "に発注した商品だけ") : "";
   const sup = {};
-  S.items.forEach(it=>{
+  (M ? S.items.filter(it=> inYM(itemBDate(it), ym)) : S.items).forEach(it=>{
     const k = it.supplier || "（未記入）"; const c = calc(it);
     const g = sup[k] = sup[k] || {n:0, sold:0, stock:0, sales:0, profit:0};
     g.n++; if(c.status==="sold"){ g.sold++; g.sales += numOr(it.soldPrice); g.profit += c.profit; } else g.stock++;
@@ -1210,8 +1344,10 @@ function renderStats(){
     `</tbody>`;
 
   // 販路べつ
+  const cn = document.getElementById("chNote");
+  if(cn) cn.textContent = M ? (statsMonthLabel() + "に売れた商品だけ") : "";
   const ch = {};
-  S.items.forEach(it=>{ const c = calc(it); if(c.status!=="sold") return;
+  soldScope.forEach(it=>{ const c = calc(it); if(c.status!=="sold") return;
     const k = it.channel || "メルカリ"; const g = ch[k] = ch[k] || {n:0, sales:0, profit:0};
     g.n++; g.sales += numOr(it.soldPrice); g.profit += c.profit; });
   $("#chTable").innerHTML = `<thead><tr><th>販路</th><th>販売数</th><th>売上</th><th>平均単価</th><th>純利益</th><th>利益率</th></tr></thead><tbody>` +
@@ -1221,9 +1357,9 @@ function renderStats(){
       : `<tr><td>まだ販売がありません。</td></tr>`) + `</tbody>`;
 
   // 在庫の古い順（滞留）
-  const inv = S.items.filter(it=>calc(it).status !== "sold")
-    .map(it=>({ it, age: stockAge(it) }))
-    .sort((a,b)=> String(stockDate(a.it)).localeCompare(String(stockDate(b.it))));
+  const inv = statsInvScope(ym);
+  const an = document.getElementById("ageNote");
+  if(an) an.textContent = M ? (statsMonthLabel() + "末の売れ残り・古い順") : "売れ残りのみ・古い順";
   const th = ageDays();
   const over = inv.filter(x=>x.age !== null && x.age >= th);
   $("#ageSummary").innerHTML = `在庫 ${inv.length}点（¥${inv.reduce((a,x)=>a+numOr(x.it.cost),0).toLocaleString("ja-JP")}）のうち `
@@ -1245,7 +1381,9 @@ function renderStats(){
     : `<tbody><tr><td>在庫がありません。</td></tr></tbody>`;
 
   // 赤字
-  const neg = S.items.filter(it=>{ const c=calc(it); return c.status==="sold" && c.profit<0; });
+  const nn = document.getElementById("negNote");
+  if(nn) nn.textContent = M ? (statsMonthLabel() + "に売れたもの") : "売ったのに仕入を下回ったもの";
+  const neg = soldScope.filter(it=>{ const c=calc(it); return c.status==="sold" && c.profit<0; });
   $("#negBox").innerHTML = neg.length
     ? neg.map(it=>{ const c=calc(it); return `<div style="display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid var(--line2)">
         <span style="font-size:13px">${esc(it.name)}<br><span style="font-size:11.5px;color:var(--ink3)">売価 ${yen(numOr(it.soldPrice))}／仕入 ${yen(numOr(it.cost))}</span></span>
@@ -1591,6 +1729,11 @@ function kkCleanSuppliers(){
   kkInfo();
 })();
 
+(function(){
+  const el = document.getElementById("stMonth");
+  if(el) el.addEventListener("change", ()=> setStatsMonth(el.value));
+})();
+document.querySelectorAll('[data-tab="stats"]').forEach(b=>b.addEventListener("click", ()=>setTimeout(renderStats, 0)));
 $("#btnJsonOut").addEventListener("click", exportJSON);
 $("#btnSample").addEventListener("click", insertSample);
 $("#btnClear").addEventListener("click", ()=>{
@@ -1769,5 +1912,6 @@ setTimeout(() => { if(!settled && !session) showLogin(); }, 3000);
 })();
 </script>
 <script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/v31edd6df95cf4e85bb4c19e7a9bdbcba1788362987495" integrity="sha512-iIg7k2xntmwu6/uSb5tpc/hySgZc4eoL31yB29W6tJFo2akwjPWcEqnCEdJvGexCL0KEQwVYv5BlowfhVz26hg==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
+<script type="module" src="https://static.cloudflareinsights.com/beacon.min.js/vce701823e78c4301a35b7e07294d87301792088814092" integrity="sha512-UKNk8GbxkABxKcXYuLkO16EleLGUkcvJWtpSNmExE0Too3ZaFAxTscNWEc1OdAv5/BikHawapSCaiD2XCmp+Bw==" data-cf-beacon='{"version":"2024.11.0","token":"4edd5f8ec12a48cfa682ab8261b80a79","spa":2}' crossorigin="anonymous"></script>
 </body>
 </html>
