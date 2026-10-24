@@ -310,7 +310,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
 
 <header class="top">
   <div class="brand">
-    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.23-16 ・ 同期</span>
+    <span class="mark">在庫</span><span class="sub">在庫・出品・販売 ・ v2026.10.24-17 ・ 同期</span>
   </div>
   <div id="syncState" style="font-size:11px;color:var(--ink3);text-align:right;margin-top:2px;cursor:pointer"></div>
   <div class="strip" id="strip"></div>
@@ -500,10 +500,10 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
     <div class="sec"><h2>月べつの実績</h2><span class="line"></span><span class="note" id="monthNote">販売日・出品日をもとに集計</span></div>
     <div class="card scroll"><table id="monthTable"></table></div>
 
-    <div class="sec"><h2>仕入れ回べつの在庫</h2><span class="line"></span><span class="note" id="batchNote">仕入れごとの残り</span></div>
+    <div class="sec"><h2 id="batchH2">仕入れ回べつの在庫</h2><span class="line"></span><span class="note" id="batchNote">仕入れごとの残り</span></div>
     <div class="card scroll"><table id="batchTable"></table></div>
 
-    <div class="sec"><h2>仕入先べつ</h2><span class="line"></span><span class="note" id="supNote"></span></div>
+    <div class="sec"><h2 id="supH2">仕入先べつ</h2><span class="line"></span><span class="note" id="supNote"></span></div>
     <div class="card scroll"><table id="supTable"></table></div>
 
     <div class="sec"><h2>販路べつ</h2><span class="line"></span><span class="note" id="chNote"></span></div>
@@ -542,7 +542,7 @@ tr.tot td{border-top:1.5px solid var(--line);font-weight:700}
     <div class="card">
       <div class="helprow"><b>間違えたところを直す</b><p>一覧のカードの<b>「編集」</b>を押すと、入力画面に内容が入ります。直して「この内容で更新する」を押してください。</p></div>
       <div class="helprow"><b>発注日をまちがえた</b><p>「データ」タブの<b>仕入れ回ごとの発注日</b>で直せます。直すと、その回の商品の発注日も同じ日にそろいます（仕入先が不用品の商品は当日のまま）。</p></div>
-      <div class="helprow"><b>月ごとの数字を見る</b><p>「集計」タブの一番上の<b>集計する月</b>で月を選ぶと、下の数字がその月に切りかわります。売上・利益・手数料は<b>販売日</b>、仕入れと出品は<b>発注日・出品日</b>、在庫は<b>その月末時点</b>で数えます。「すべての期間」に戻すと累計です。</p></div>
+      <div class="helprow"><b>月ごとの数字を見る</b><p>「集計」タブの一番上の<b>集計する月</b>で月を選ぶと、下の数字がその月に切りかわります。売上・利益・手数料と、仕入れ回べつ・仕入先べつの表は<b>販売日</b>（その月に売れた商品の内訳）、仕入れと出品のカードは<b>発注日・出品日</b>、在庫は<b>その月末時点</b>で数えます。「すべての期間」に戻すと累計です。</p></div>
       <div class="helprow"><b>消したいとき</b><p>カードの<b>「削除」</b>を押すと確認が出ます。消すと元に戻せません。</p></div>
       <div class="helprow"><b>特定の商品をさがす</b><p>一覧タブの検索欄に <b>7-10</b> のように管理番号を入れると、その商品だけ出ます。商品名や仕入先でも探せます。</p></div>
       <div class="helprow"><b>出品日を入れるのを忘れた</b><p>「出品した」を押すと出品日が今日で入ります。後から編集で日付を直せます。</p></div>
@@ -1247,7 +1247,7 @@ function renderStats(){
   $("#statNote").textContent = M ? statsMonthLabel() : `登録 ${t.n}件`;
   const basis = document.getElementById("stBasis");
   if(basis) basis.innerHTML = M
-    ? `<b>${statsMonthLabel()}</b>の数字です。売上・利益・手数料は<b>その月に売れた商品</b>、仕入れ・出品は<b>その月の発注日・出品日</b>、在庫は<b>その月末時点</b>で数えています。「すべての期間」に戻すと累計になります。`
+    ? `<b>${statsMonthLabel()}</b>の数字です。売上・利益・手数料と、<b>仕入れ回べつ・仕入先べつの表</b>は<b>その月に売れた商品</b>、仕入れ・出品のカードは<b>その月の発注日・出品日</b>、在庫は<b>その月末時点</b>で数えています。「すべての期間」に戻すと累計になります。`
     : `いまは<b>全期間</b>の数字です。「集計する月」で月を選ぶと、その月の数字に切りかわります。`;
   const kpi = (k,v,s="")=>`<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:""}</div>`;
   $("#kpis").innerHTML = M
@@ -1314,34 +1314,81 @@ function renderStats(){
        <td class="n">${yen(sum.sales)}</td><td class="n">${yen(sum.profit)}</td><td></td><td></td></tr></tbody>`
     : `<tbody><tr><td>${M ? statsMonthLabel() + "の実績はまだありません。" : "まだデータがありません。"}</td></tr></tbody>`;
 
-  // 仕入れ回べつ
-  const bn = document.getElementById("batchNote");
-  if(bn) bn.textContent = M ? (statsMonthLabel() + "に発注した仕入れ回（発注日がその月の商品だけ）") : "仕入れごとの残り";
-  const bs = byBatch(M ? S.items.filter(it=> inYM(itemBDate(it), ym)) : S.items);
-  $("#batchTable").innerHTML = bs.length
-    ? `<thead><tr><th>仕入れ回</th><th>発注日</th><th>仕入先</th><th>仕入点数</th><th>在庫</th><th>在庫金額</th><th>販売</th><th>売上</th><th>純利益</th><th>販売率</th></tr></thead><tbody>` +
-      bs.map(g=>`<tr><td>${esc(g.batch)}</td><td>${g.order?g.order.replace(/-/g,"/"):"—"}</td><td>${esc(g.supplier||"—")}</td>
-        <td class="n">${g.n}</td><td class="n">${g.stock}</td><td class="n">${yen(g.stockAmt)}</td><td class="n">${g.sold}</td>
-        <td class="n">${yen(g.sales)}</td><td class="n">${yen(g.profit)}</td><td class="n">${g.n?pct(g.sold/g.n):"—"}</td></tr>`).join("") +
-      `<tr class="tot"><td>合計</td><td></td><td></td><td class="n">${bs.reduce((a,g)=>a+g.n,0)}</td><td class="n">${bs.reduce((a,g)=>a+g.stock,0)}</td>
-        <td class="n">${yen(bs.reduce((a,g)=>a+g.stockAmt,0))}</td><td class="n">${bs.reduce((a,g)=>a+g.sold,0)}</td>
-        <td class="n">${yen(bs.reduce((a,g)=>a+g.sales,0))}</td><td class="n">${yen(bs.reduce((a,g)=>a+g.profit,0))}</td><td></td></tr></tbody>`
-    : `<tbody><tr><td>まだデータがありません。</td></tr></tbody>`;
+  // 仕入れ回べつ・仕入先べつ
+  const bn = document.getElementById("batchNote"), sn = document.getElementById("supNote");
+  const bh = document.getElementById("batchH2"), sh = document.getElementById("supH2");
+  if(M){
+    /* 月を選んだとき：その月に売れた商品の内訳（売上・純利益の合計はカードの数字と一致） */
+    if(bh) bh.textContent = "仕入れ回べつ（売れた内訳）";
+    if(sh) sh.textContent = "仕入先べつ（売れた内訳）";
+    if(bn) bn.textContent = statsMonthLabel() + "に売れた商品";
+    if(sn) sn.textContent = statsMonthLabel() + "に売れた商品";
+    const agg = keyFn => {
+      const m = {};
+      soldScope.forEach(it=>{
+        const k = keyFn(it), c = calc(it);
+        const g = m[k] = m[k] || { key:k, n:0, sales:0, cost:0, fs:0, profit:0 };
+        g.n++; g.sales += numOr(it.soldPrice); g.cost += numOr(it.cost);
+        g.fs += c.fee + numOr(it.ship) + numOr(it.tax); g.profit += c.profit;
+      });
+      return Object.values(m);
+    };
+    const sumRow = (list, lead) => {
+      const t = list.reduce((a,g)=>({n:a.n+g.n, sales:a.sales+g.sales, cost:a.cost+g.cost, fs:a.fs+g.fs, profit:a.profit+g.profit}), {n:0,sales:0,cost:0,fs:0,profit:0});
+      return `<tr class="tot">${lead}<td class="n">${t.n}</td><td class="n">${yen(t.sales)}</td><td class="n">${yen(t.cost)}</td><td class="n">${yen(t.fs)}</td><td class="n">${yen(t.profit)}</td><td class="n">${t.sales?pct(t.profit/t.sales):"—"}</td></tr>`;
+    };
+    const cells = g => `<td class="n">${g.n}</td><td class="n">${yen(g.sales)}</td><td class="n">${yen(g.cost)}</td><td class="n">${yen(g.fs)}</td><td class="n">${yen(g.profit)}</td><td class="n">${g.sales?pct(g.profit/g.sales):"—"}</td>`;
+    const empty = `<tbody><tr><td>${statsMonthLabel()}に売れた商品はまだありません。</td></tr></tbody>`;
+    const head = `<th>販売</th><th>売上</th><th>仕入原価</th><th>手数料・送料</th><th>純利益</th><th>利益率</th>`;
 
-  // 仕入先べつ
-  const sn = document.getElementById("supNote");
-  if(sn) sn.textContent = M ? (statsMonthLabel() + "に発注した商品だけ") : "";
-  const sup = {};
-  (M ? S.items.filter(it=> inYM(itemBDate(it), ym)) : S.items).forEach(it=>{
-    const k = it.supplier || "（未記入）"; const c = calc(it);
-    const g = sup[k] = sup[k] || {n:0, sold:0, stock:0, sales:0, profit:0};
-    g.n++; if(c.status==="sold"){ g.sold++; g.sales += numOr(it.soldPrice); g.profit += c.profit; } else g.stock++;
-  });
-  $("#supTable").innerHTML = `<thead><tr><th>仕入先</th><th>仕入数</th><th>在庫</th><th>販売</th><th>売上</th><th>純利益</th><th>販売率</th></tr></thead><tbody>` +
-    Object.entries(sup).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>
-      `<tr><td>${esc(k)}</td><td class="n">${g.n}</td><td class="n">${g.stock}</td><td class="n">${g.sold}</td>
-       <td class="n">${yen(g.sales)}</td><td class="n">${yen(g.profit)}</td><td class="n">${g.n?pct(g.sold/g.n):"—"}</td></tr>`).join("") +
-    `</tbody>`;
+    /* 仕入れ回：発注日・仕入先はその回全体から拾う（不用品は除いて代表を出す） */
+    const bl = agg(it=> it.batch || "未設定").sort((a,b)=> batchNum(b.key) - batchNum(a.key));
+    const batchInfo = b => {
+      const all = S.items.filter(i=>String(i.batch||"未設定") === String(b));
+      const main = all.filter(i=>!isJunkSupplier(i.supplier));
+      const sup = (main.find(i=>i.supplier) || all.find(i=>i.supplier) || {}).supplier || "";
+      return { order: batchOrderDate(b === "未設定" ? "" : b) || (main.map(i=>i.orderDate).filter(Boolean).sort()[0] || ""), sup };
+    };
+    $("#batchTable").innerHTML = bl.length
+      ? `<thead><tr><th>仕入れ回</th><th>発注日</th><th>仕入先</th>${head}</tr></thead><tbody>` +
+        bl.map(g=>{ const bi = batchInfo(g.key); return `<tr><td>${esc(g.key)}</td><td>${bi.order?bi.order.replace(/-/g,"/"):"—"}</td><td>${esc(bi.sup||"—")}</td>${cells(g)}</tr>`; }).join("") +
+        sumRow(bl, `<td>合計</td><td></td><td></td>`) + `</tbody>`
+      : empty;
+
+    const sl = agg(it=> it.supplier || "（未記入）").sort((a,b)=> b.sales - a.sales);
+    $("#supTable").innerHTML = sl.length
+      ? `<thead><tr><th>仕入先</th>${head}</tr></thead><tbody>` +
+        sl.map(g=>`<tr><td>${esc(g.key)}</td>${cells(g)}</tr>`).join("") +
+        sumRow(sl, `<td>合計</td>`) + `</tbody>`
+      : empty;
+  }else{
+    if(bh) bh.textContent = "仕入れ回べつの在庫";
+    if(sh) sh.textContent = "仕入先べつ";
+    if(bn) bn.textContent = "仕入れごとの残り";
+    if(sn) sn.textContent = "";
+    const bs = byBatch(S.items);
+    $("#batchTable").innerHTML = bs.length
+      ? `<thead><tr><th>仕入れ回</th><th>発注日</th><th>仕入先</th><th>仕入点数</th><th>在庫</th><th>在庫金額</th><th>販売</th><th>売上</th><th>純利益</th><th>販売率</th></tr></thead><tbody>` +
+        bs.map(g=>`<tr><td>${esc(g.batch)}</td><td>${g.order?g.order.replace(/-/g,"/"):"—"}</td><td>${esc(g.supplier||"—")}</td>
+          <td class="n">${g.n}</td><td class="n">${g.stock}</td><td class="n">${yen(g.stockAmt)}</td><td class="n">${g.sold}</td>
+          <td class="n">${yen(g.sales)}</td><td class="n">${yen(g.profit)}</td><td class="n">${g.n?pct(g.sold/g.n):"—"}</td></tr>`).join("") +
+        `<tr class="tot"><td>合計</td><td></td><td></td><td class="n">${bs.reduce((a,g)=>a+g.n,0)}</td><td class="n">${bs.reduce((a,g)=>a+g.stock,0)}</td>
+          <td class="n">${yen(bs.reduce((a,g)=>a+g.stockAmt,0))}</td><td class="n">${bs.reduce((a,g)=>a+g.sold,0)}</td>
+          <td class="n">${yen(bs.reduce((a,g)=>a+g.sales,0))}</td><td class="n">${yen(bs.reduce((a,g)=>a+g.profit,0))}</td><td></td></tr></tbody>`
+      : `<tbody><tr><td>まだデータがありません。</td></tr></tbody>`;
+
+    const sup = {};
+    S.items.forEach(it=>{
+      const k = it.supplier || "（未記入）"; const c = calc(it);
+      const g = sup[k] = sup[k] || {n:0, sold:0, stock:0, sales:0, profit:0};
+      g.n++; if(c.status==="sold"){ g.sold++; g.sales += numOr(it.soldPrice); g.profit += c.profit; } else g.stock++;
+    });
+    $("#supTable").innerHTML = `<thead><tr><th>仕入先</th><th>仕入数</th><th>在庫</th><th>販売</th><th>売上</th><th>純利益</th><th>販売率</th></tr></thead><tbody>` +
+      Object.entries(sup).sort((a,b)=>b[1].n-a[1].n).map(([k,g])=>
+        `<tr><td>${esc(k)}</td><td class="n">${g.n}</td><td class="n">${g.stock}</td><td class="n">${g.sold}</td>
+         <td class="n">${yen(g.sales)}</td><td class="n">${yen(g.profit)}</td><td class="n">${g.n?pct(g.sold/g.n):"—"}</td></tr>`).join("") +
+      `</tbody>`;
+  }
 
   // 販路べつ
   const cn = document.getElementById("chNote");
